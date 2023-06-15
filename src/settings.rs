@@ -37,6 +37,8 @@ pub struct Settings {
     pub colored: bool,
     /// Include remote branches?
     pub include_remote: bool,
+    /// Sets log level,
+    pub log_level: log::LevelFilter,
     /// Formatting for commits
     pub format: CommitFormat,
     /// Text wrapping options

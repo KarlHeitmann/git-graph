@@ -26,6 +26,27 @@ pub struct GitGraph {
     pub head: HeadInfo,
 }
 
+/// Setup the log level of the application
+fn setup_logger(level: log::LevelFilter) {
+    let logfile = log4rs::append::file::FileAppender::builder()
+        .encoder(Box::new(log4rs::encode::pattern::PatternEncoder::new(
+            "{l} - {m}\n",
+        )))
+        .build("log.txt")
+        .unwrap();
+
+    let config = log4rs::Config::builder()
+        .appender(log4rs::config::Appender::builder().build("logfile", Box::new(logfile)))
+        .build(
+            log4rs::config::Root::builder()
+                .appender("logfile")
+                .build(level),
+        )
+        .unwrap();
+
+    let _handle = log4rs::init_config(config).unwrap();
+}
+
 impl GitGraph {
     pub fn new(
         mut repository: Repository,
@@ -77,6 +98,8 @@ impl GitGraph {
         }
 
         assign_children(&mut commits, &indices);
+
+        setup_logger(settings.log_level);
 
         let mut all_branches = assign_branches(&repository, &mut commits, &indices, settings)?;
         correct_fork_merges(&commits, &indices, &mut all_branches, settings)?;

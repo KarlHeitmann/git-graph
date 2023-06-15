@@ -89,6 +89,13 @@ fn from_args() -> Result<(), String> {
                 .num_args(0),
         )
         .arg(
+            Arg::new("log-level")
+                .long("log-level")
+                .help("Output log messages to a file. Default off. One of [error|warn|info|debug|trace|off].")
+                .required(false)
+                .num_args(1),
+        )
+        .arg(
             Arg::new("svg")
                 .long("svg")
                 .help("Render graph as SVG instead of text-based.")
@@ -238,6 +245,21 @@ fn from_args() -> Result<(), String> {
         }
     }
 
+    let log_level = match matches.get_one::<String>("log-level") {
+        Some(log_level) => {
+            match log_level.as_str() {
+                "error" => log::LevelFilter::Error,
+                "warn" => log::LevelFilter::Warn,
+                "info" => log::LevelFilter::Info,
+                "debug" => log::LevelFilter::Debug,
+                "trace" => log::LevelFilter::Trace,
+                "off" => log::LevelFilter::Off,
+                _ => log::LevelFilter::Off,
+            }
+        }
+        None => log::LevelFilter::Off
+    };
+
     let dot = ".".to_string();
     let path = matches.get_one::<String>("path").unwrap_or(&dot);
     let repository = get_repo(path)
@@ -364,6 +386,7 @@ fn from_args() -> Result<(), String> {
     };
 
     let settings = Settings {
+        log_level,
         debug,
         colored,
         compact,
