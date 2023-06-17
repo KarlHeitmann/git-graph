@@ -47,6 +47,41 @@ fn setup_logger(level: log::LevelFilter) {
     let _handle = log4rs::init_config(config).unwrap();
 }
 
+fn collapse_branch(commits: &mut Vec::<CommitInfo>, target_oid: Oid) {
+    let mut join_oid = None;
+    let mut hiding = false;
+    for idx in 0..commits.len() {
+        /*
+        let (oid, parents) = {
+            let info = &commits[idx];
+            (info.oid, info.parents)
+        };
+        for par_oid in &parents {
+            if let Some(par_idx) = par_oid.and_then(|oid| indices.get(&oid)) {
+                commits[*par_idx].children.push(oid);
+            }
+        }
+        */
+        // let oid = (&commits[idx]).oid;
+        let (oid, parents) = {
+            let info = &commits[idx];
+            (info.oid, info.parents)
+        };
+        if oid == target_oid {
+            join_oid = parents[0];
+            hiding = true;
+        }
+        if hiding {
+            if oid == join_oid.unwrap() {
+                hiding = false
+            } else {
+                let commit_info = &mut commits[idx];
+                commit_info.visible = false;
+            }
+        }
+    }
+}
+
 impl GitGraph {
     pub fn new(
         mut repository: Repository,
@@ -119,9 +154,16 @@ impl GitGraph {
             forward,
         );
 
-        let filtered_commits: Vec<CommitInfo> = commits
+        let mut filtered_commits: Vec<CommitInfo> = commits
             .into_iter()
             .filter(|info| info.branch_trace.is_some())
+            .collect();
+
+        // collapse_branch(&mut filtered_commits, Oid::from_str("a32a03b6be4fc5d47520db05a262ddda373b1d1f").unwrap());
+
+        let filtered_commits: Vec<CommitInfo> = filtered_commits
+            .into_iter()
+            .filter(|commit_info| commit_info.visible )
             .collect();
 
         let filtered_indices: HashMap<Oid, usize> = filtered_commits
@@ -231,6 +273,7 @@ pub struct CommitInfo {
     pub branches: Vec<usize>,
     pub tags: Vec<usize>,
     pub branch_trace: Option<usize>,
+    pub visible: bool,
 }
 
 impl CommitInfo {
@@ -243,11 +286,13 @@ impl CommitInfo {
             branches: Vec::new(),
             tags: Vec::new(),
             branch_trace: None,
+            visible: true,
         }
     }
 }
 
 /// Represents a branch (real or derived from merge summary).
+#[derive(Debug)]
 pub struct BranchInfo {
     pub target: Oid,
     pub merge_target: Option<Oid>,
